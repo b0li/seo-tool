@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="robots" content="noindex, nofollow">
+	<title>SEO Check</title>
+
+	<style>
+
+		@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;600;700&display=swap');
+
+		*, *::before, *::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		:root {
+			--bg: #1a1d23;
+			--surface: #22262e;
+			--surface-2: #2a2f39;
+			--border: #333844;
+			--accent: #d4a55a;
+			--accent-dim: rgba( 212, 165, 90, 0.15 );
+			--green: #6abf69;
+			--red: #e06c6c;
+			--text: #e8eaf0;
+			--text-dim: #8a909e;
+			--radius: 10px;
+		}
+
+		body {
+			background: var( --bg );
+			color: var( --text );
+			font-family: 'DM Sans', system-ui, sans-serif;
+			min-height: 100vh;
+			line-height: 1.5;
+			padding: 32px 16px 64px;
+		}
+
+		.wrap {
+			max-width: 860px;
+			margin: 0 auto;
+		}
+
+		h1 {
+			font-family: 'DM Serif Display', Georgia, serif;
+			font-size: 2rem;
+			font-weight: 400;
+			color: var( --accent );
+			text-align: center;
+			margin-bottom: 8px;
+		}
+
+		.subtitle {
+			text-align: center;
+			color: var( --text-dim );
+			font-size: 0.9rem;
+			margin-bottom: 32px;
+		}
+
+		.subtitle code {
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.85em;
+			color: var( --text );
+		}
+
+		.skip-link {
+			position: absolute;
+			left: -999px;
+			top: 0;
+			background: var( --accent );
+			color: #1a1d23;
+			font-weight: 600;
+			padding: 8px 16px;
+			border-radius: var( --radius );
+			z-index: 10;
+		}
+
+		.skip-link:focus {
+			left: 16px;
+			top: 16px;
+		}
+
+		/* Surface card */
+
+		.card {
+			background: var( --surface );
+			border: 1px solid var( --border );
+			border-radius: var( --radius );
+			padding: 18px 20px;
+			margin-bottom: 16px;
+		}
+
+		/* Form */
+
+		label {
+			display: block;
+			font-size: 0.78rem;
+			color: var( --text-dim );
+			margin-bottom: 6px;
+		}
+
+		input[type="text"] {
+			width: 100%;
+			background: var( --surface-2 );
+			border: 1px solid var( --border );
+			border-radius: 6px;
+			color: var( --text );
+			font-family: inherit;
+			font-size: 0.9rem;
+			padding: 9px 12px;
+			outline: none;
+		}
+
+		input[type="text"]:focus {
+			border-color: var( --accent );
+		}
+
+		input[type="text"]:focus-visible,
+		button:focus-visible,
+		.chip:focus-visible {
+			outline: 2px solid var( --accent );
+			outline-offset: 2px;
+		}
+
+		.row {
+			display: flex;
+			gap: 12px;
+			align-items: flex-end;
+			flex-wrap: wrap;
+		}
+
+		.row .field {
+			flex: 1 1 240px;
+		}
+
+		/* Buttons */
+
+		button {
+			background: var( --accent );
+			color: #1a1d23;
+			border: none;
+			border-radius: 6px;
+			font-family: inherit;
+			font-size: 0.85rem;
+			font-weight: 600;
+			padding: 9px 18px;
+			cursor: pointer;
+			transition: opacity 0.15s;
+		}
+
+		button:hover {
+			opacity: 0.85;
+		}
+
+		button.secondary {
+			background: var( --surface-2 );
+			color: var( --text-dim );
+			border: 1px solid var( --border );
+		}
+
+		button.secondary:hover {
+			opacity: 1;
+			color: var( --text );
+			border-color: var( --accent );
+		}
+
+		.presets {
+			display: flex;
+			gap: 12px;
+			flex-wrap: wrap;
+			margin-top: 14px;
+		}
+
+		.presets .reset {
+			margin-left: auto;
+		}
+
+		.presets .reset:hover {
+			color: var( --red );
+			border-color: var( --red );
+		}
+
+		/* Score badge */
+
+		.score {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			margin-bottom: 4px;
+		}
+
+		.score__ring {
+			flex-shrink: 0;
+			width: 58px;
+			height: 58px;
+			border-radius: 50%;
+			display: grid;
+			place-items: center;
+			font-size: 1.1rem;
+			font-weight: 700;
+			color: var( --text );
+			background: var( --surface-2 );
+			border: 2px solid var( --border );
+		}
+
+		.score__ring.is-good { border-color: var( --green ); color: var( --green ); }
+		.score__ring.is-mid { border-color: var( --accent ); color: var( --accent ); }
+		.score__ring.is-bad { border-color: var( --red ); color: var( --red ); }
+
+		.score__meta {
+			font-size: 0.85rem;
+			color: var( --text-dim );
+		}
+
+		.score__meta strong {
+			color: var( --text );
+			font-weight: 700;
+		}
+
+		.score__url {
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.8rem;
+			word-break: break-all;
+		}
+
+		/* Groups + table */
+
+		.group {
+			margin-bottom: 18px;
+		}
+
+		.group:last-child {
+			margin-bottom: 0;
+		}
+
+		.group__title {
+			font-size: 0.72rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: var( --text-dim );
+			font-weight: 700;
+			margin-bottom: 10px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.group__title .count {
+			color: var( --accent );
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.85rem;
+		}
+
+		th,
+		td {
+			text-align: left;
+			padding: 8px 10px;
+			border-bottom: 1px solid var( --border );
+			vertical-align: top;
+		}
+
+		tr:last-child th,
+		tr:last-child td {
+			border-bottom: none;
+		}
+
+		th.key {
+			font-size: 0.78rem;
+			color: var( --text-dim );
+			font-weight: 600;
+			white-space: nowrap;
+			width: 150px;
+		}
+
+		td.value {
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			word-break: break-word;
+		}
+
+		td.value a {
+			color: var( --accent );
+		}
+
+		.len {
+			display: inline-block;
+			font-family: 'DM Sans', sans-serif;
+			font-size: 0.68rem;
+			font-weight: 700;
+			padding: 1px 7px;
+			border-radius: 999px;
+			margin-left: 6px;
+			vertical-align: middle;
+		}
+
+		.len.ok { background: rgba( 106, 191, 105, 0.16 ); color: var( --green ); }
+		.len.warn { background: var( --accent-dim ); color: var( --accent ); }
+		.len.err { background: rgba( 224, 108, 108, 0.15 ); color: var( --red ); }
+
+		.miss {
+			color: var( --red );
+			font-style: italic;
+			font-family: 'DM Sans', sans-serif;
+		}
+
+		/* SERP preview */
+
+		.serp {
+			background: #fff;
+			border-radius: 8px;
+			padding: 14px 16px;
+			font-family: arial, sans-serif;
+		}
+
+		.serp__url { color: #202124; font-size: 13px; }
+		.serp__title { color: #1a0dab; font-size: 19px; line-height: 1.3; margin: 2px 0 3px; }
+		.serp__desc { color: #4d5156; font-size: 13px; line-height: 1.45; }
+
+		/* OG preview */
+
+		.og {
+			border: 1px solid var( --border );
+			border-radius: 8px;
+			overflow: hidden;
+			background: var( --surface-2 );
+			max-width: 420px;
+		}
+
+		.og img {
+			display: block;
+			width: 100%;
+			aspect-ratio: 1200 / 630;
+			object-fit: cover;
+			background: var( --bg );
+		}
+
+		.og__body {
+			padding: 10px 14px;
+		}
+
+		.og__host { font-size: 0.72rem; color: var( --text-dim ); text-transform: uppercase; letter-spacing: 0.03em; }
+		.og__title { font-size: 0.92rem; font-weight: 700; margin: 2px 0; }
+		.og__desc { font-size: 0.8rem; color: var( --text-dim ); }
+
+		/* Schema */
+
+		.schema-type {
+			display: inline-block;
+			background: var( --accent-dim );
+			color: var( --accent );
+			font-size: 0.75rem;
+			font-weight: 700;
+			padding: 3px 10px;
+			border-radius: 999px;
+			margin: 0 6px 6px 0;
+		}
+
+		details.raw {
+			margin-top: 8px;
+			border: 1px solid var( --border );
+			border-radius: 6px;
+		}
+
+		details.raw > summary {
+			padding: 8px 12px;
+			font-size: 0.78rem;
+			color: var( --text-dim );
+			cursor: pointer;
+			list-style: none;
+		}
+
+		details.raw > summary::-webkit-details-marker { display: none; }
+		details.raw[open] > summary { color: var( --accent ); }
+
+		pre.json {
+			margin: 0;
+			padding: 12px;
+			border-top: 1px solid var( --border );
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.78rem;
+			line-height: 1.5;
+			color: var( --text );
+			overflow-x: auto;
+			white-space: pre;
+		}
+
+		/* Headings outline */
+
+		.outline {
+			list-style: none;
+			font-size: 0.85rem;
+		}
+
+		.outline li {
+			padding: 3px 0;
+			border-bottom: 1px solid var( --border );
+		}
+
+		.outline li:last-child { border-bottom: none; }
+
+		.outline .tag {
+			display: inline-block;
+			width: 34px;
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.72rem;
+			font-weight: 700;
+			color: var( --accent );
+		}
+
+		.outline .lvl2 { padding-left: 16px; }
+		.outline .lvl3 { padding-left: 32px; }
+		.outline .lvl4 { padding-left: 48px; }
+		.outline .lvl5 { padding-left: 64px; }
+		.outline .lvl6 { padding-left: 80px; }
+
+		/* Checks */
+
+		.checks {
+			list-style: none;
+			display: grid;
+			gap: 7px;
+		}
+
+		.checks li {
+			display: flex;
+			gap: 10px;
+			align-items: flex-start;
+			font-size: 0.85rem;
+		}
+
+		.checks .ic {
+			flex-shrink: 0;
+			width: 18px;
+			height: 18px;
+			border-radius: 50%;
+			display: grid;
+			place-items: center;
+			font-size: 0.7rem;
+			font-weight: 700;
+			margin-top: 1px;
+		}
+
+		.checks .ok .ic { background: rgba( 106, 191, 105, 0.16 ); color: var( --green ); }
+		.checks .warn .ic { background: var( --accent-dim ); color: var( --accent ); }
+		.checks .err .ic { background: rgba( 224, 108, 108, 0.15 ); color: var( --red ); }
+		.checks .warn, .checks .err { color: var( --text ); }
+		.checks .ok { color: var( --text-dim ); }
+
+		/* Notes + misc */
+
+		.note {
+			font-size: 0.8rem;
+			padding: 8px 12px;
+			border-radius: 6px;
+			margin-top: 8px;
+		}
+
+		.note--ok { background: var( --accent-dim ); color: var( --green ); }
+		.note--warn { background: var( --accent-dim ); color: var( --accent ); }
+		.note--err { background: rgba( 224, 108, 108, 0.15 ); color: var( --red ); }
+
+		.copy-btn {
+			background: var( --surface-2 );
+			color: var( --text-dim );
+			border: 1px solid var( --border );
+			font-size: 0.72rem;
+			font-weight: 600;
+			padding: 4px 10px;
+			border-radius: 4px;
+		}
+
+		.copy-btn:hover {
+			opacity: 1;
+			color: var( --text );
+			border-color: var( --accent );
+		}
+
+		.empty {
+			color: var( --text-dim );
+			font-style: italic;
+			font-size: 0.85rem;
+		}
+
+		.card__head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			margin-bottom: 14px;
+		}
+
+		.card__title {
+			font-size: 0.95rem;
+			font-weight: 700;
+			color: var( --text );
+		}
+
+		.sr-only {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			padding: 0;
+			margin: -1px;
+			overflow: hidden;
+			clip: rect( 0, 0, 0, 0 );
+			white-space: nowrap;
+			border: 0;
+		}
+
+		.spin {
+			display: inline-block;
+			width: 14px;
+			height: 14px;
+			border: 2px solid var( --border );
+			border-top-color: var( --accent );
+			border-radius: 50%;
+			animation: spin 0.7s linear infinite;
+			vertical-align: middle;
+		}
+
+		@keyframes spin {
+			to { transform: rotate( 360deg ); }
+		}
+
+		/* FAQ / Legende */
+
+		.faq {
+			background: var( --surface );
+			border: 1px solid var( --border );
+			border-radius: var( --radius );
+			padding: 0 20px;
+			margin-top: 24px;
+		}
+
+		.faq > summary {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 16px 0;
+			font-size: 0.9rem;
+			font-weight: 700;
+			color: var( --text );
+			cursor: pointer;
+			list-style: none;
+		}
+
+		.faq > summary::-webkit-details-marker { display: none; }
+
+		.faq > summary::before {
+			content: "";
+			width: 7px;
+			height: 7px;
+			border-right: 2px solid var( --accent );
+			border-bottom: 2px solid var( --accent );
+			transform: rotate( -45deg );
+			transition: transform 0.2s;
+			flex-shrink: 0;
+		}
+
+		.faq[open] > summary::before {
+			transform: rotate( 45deg );
+		}
+
+		.faq__body {
+			padding-bottom: 20px;
+			font-size: 0.85rem;
+			color: var( --text-dim );
+		}
+
+		.faq__body p { margin-bottom: 10px; }
+		.faq__body strong { color: var( --text ); }
+		.faq__body code {
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.82em;
+			color: var( --accent );
+		}
+
+		@media ( max-width: 520px ) {
+
+			th.key { width: auto; }
+
+			.card { padding: 16px; }
+
+		}
+
+	</style>
+
+</head>
+<body>
+
+	<a href="#main-content" class="skip-link" aria-label="Zum Hauptinhalt springen">Zum Hauptinhalt springen</a>
+
+	<div class="wrap">
+
+		<h1>SEO Check</h1>
+		<p class="subtitle">Alle SEO-relevanten Daten einer Domain auslesen &middot; ohne Backend</p>
+
+		<main id="main-content">
+
+			<div class="card">
+
+				<form id="seo-form">
+
+					<div class="row">
+
+						<div class="field">
+							<label for="url-input">Domain oder URL</label>
+							<input
+								id="url-input"
+								type="text"
+								name="url"
+								placeholder="beispiel.de"
+								autocomplete="off"
+								autocapitalize="off"
+								spellcheck="false"
+							>
+						</div>
+
+						<button type="submit" id="submit-btn" aria-label="SEO-Daten auslesen">Auslesen</button>
+
+					</div>
+
+					<div class="presets">
+
+						<button type="button" class="secondary reset" id="reset-btn" aria-label="Formular und Ergebnisse zurücksetzen">Zurücksetzen</button>
+
+					</div>
+
+				</form>
+
+			</div>
+
+			<div id="status" role="status" aria-live="polite"></div>
+
+			<div id="results"></div>
+
+		</main>
+
+		<details class="faq">
+
+			<summary>Was wird geprüft &amp; wie funktioniert das?</summary>
+
+			<div class="faq__body">
+
+				<p>Das Tool lädt den HTML-Quellcode der Seite clientseitig über <strong>öffentliche CORS-Proxys</strong> (allorigins, corsproxy.io, codetabs &ndash; parallel abgefragt, die erste gültige Antwort gewinnt) und parst den <code>&lt;head&gt;</code> sowie die Seitenstruktur per <code>DOMParser</code>. Es läuft kein eigenes Backend.</p>
+
+				<p><strong>Ausgelesen wird:</strong> Title &amp; Meta-Description (inkl. Längen-Bewertung), Robots, Canonical, Viewport, Charset, Sprache, Open Graph, Twitter Cards, Schema.org (JSON-LD), Heading-Struktur (H1&ndash;H6), Hreflang-Alternativen, Favicons/Icons und Bilder-Alt-Texte.</p>
+
+				<p><strong>Hinweis Datenschutz:</strong> Die Abfrage läuft über einen fremden Proxy-Dienst &ndash; die angefragte URL ist für diesen sichtbar. Für interne/geschützte Seiten nicht geeignet. JavaScript-gerenderte Inhalte (SPAs) werden nur begrenzt erfasst, da der Proxy das rohe HTML ohne JS-Ausführung liefert.</p>
+
+			</div>
+
+		</details>
+
+	</div>
+
+	<script>
+
+		( function() {
+
+			"use strict";
+
+			// Optional: own proxy for reliability + privacy (e.g. a small PHP script on
+			// your own hosting that echoes the fetched URL). Leave empty to use the public
+			// chain below. Expected format: CUSTOM_PROXY + encodeURIComponent( targetUrl ).
+			const CUSTOM_PROXY = "https://lake-studio.de/tools/proxy.php?url="; // own proxy first, public as fallback
+
+			// Public CORS proxies — raced in parallel, first valid HTML wins.
+			// Racing avoids the serial-hang problem (e.g. allorigins /raw often stalls
+			// while allorigins /get answers instantly).
+			const PROXIES = [
+				{ name: "allorigins-json", build: u => "https://api.allorigins.win/get?url=" + encodeURIComponent( u ), type: "json" },
+				{ name: "allorigins", build: u => "https://api.allorigins.win/raw?url=" + encodeURIComponent( u ), type: "text" },
+				{ name: "corsproxy.io", build: u => "https://corsproxy.io/?url=" + encodeURIComponent( u ), type: "text" },
+				{ name: "codetabs", build: u => "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent( u ), type: "text" }
+			];
+
+			const CUSTOM = CUSTOM_PROXY
+				? { name: "eigener Proxy", build: u => CUSTOM_PROXY + encodeURIComponent( u ), type: "text" }
+				: null;
+
+			const form = document.getElementById( "seo-form" );
+			const input = document.getElementById( "url-input" );
+			const submitBtn = document.getElementById( "submit-btn" );
+			const resetBtn = document.getElementById( "reset-btn" );
+			const statusEl = document.getElementById( "status" );
+			const resultsEl = document.getElementById( "results" );
+
+			// Normalize user input into a full URL
+			const normalizeUrl = function( raw ) {
+
+				let v = raw.trim();
+
+				if ( ! v ) return "";
+
+				if ( ! /^https?:\/\//i.test( v ) ) {
+					v = "https://" + v;
+				}
+
+				try {
+					const u = new URL( v );
+					u.hostname = u.hostname.toLowerCase();
+					return u.href;
+				} catch ( e ) {
+					return "";
+				}
+
+			};
+
+			// Fetch HTML through a single proxy, with its own timeout
+			const tryProxy = async function( proxy, url ) {
+
+				const ctrl = new AbortController();
+				const timer = setTimeout( () => ctrl.abort(), 10000 );
+
+				try {
+
+					const res = await fetch( proxy.build( url ), { redirect: "follow", signal: ctrl.signal } );
+
+					clearTimeout( timer );
+
+					if ( ! res.ok ) throw new Error( "HTTP " + res.status );
+
+					let html;
+
+					if ( proxy.type === "json" ) {
+						const data = await res.json();
+						html = data && data.contents ? data.contents : "";
+					} else {
+						html = await res.text();
+					}
+
+					// Basic sanity check: looks like markup
+					if ( ! html || html.length < 50 || html.indexOf( "<" ) === -1 ) {
+						throw new Error( "Leere Antwort" );
+					}
+
+					return { html: html, proxy: proxy.name };
+
+				} catch ( e ) {
+					clearTimeout( timer );
+					throw new Error( ( e.name === "AbortError" ? "Timeout" : e.message ) + " (" + proxy.name + ")" );
+				}
+
+			};
+
+			// Race all public proxies — the first valid response wins, no serial hang
+			const raceProxies = async function( url ) {
+
+				try {
+					return await Promise.any( PROXIES.map( p => tryProxy( p, url ) ) );
+				} catch ( e ) {
+					const msgs = ( e.errors || [] ).map( x => x.message ).join( ", " );
+					throw new Error( msgs || "Alle Proxy-Dienste fehlgeschlagen" );
+				}
+
+			};
+
+			// Prefer the own proxy (privacy), fall back to the public race
+			const fetchHtmlRetry = async function( url ) {
+
+				if ( CUSTOM ) {
+					try {
+						return await tryProxy( CUSTOM, url );
+					} catch ( e ) {
+						// own proxy failed — continue with public services
+					}
+				}
+
+				return await raceProxies( url );
+
+			};
+
+			// Resolve a possibly relative URL against the page URL
+			const resolve = function( value, base ) {
+
+				if ( ! value ) return "";
+
+				try {
+					return new URL( value, base ).href;
+				} catch ( e ) {
+					return value;
+				}
+
+			};
+
+			// Parse the document into a structured data object
+			const analyze = function( html, pageUrl ) {
+
+				const doc = new DOMParser().parseFromString( html, "text/html" );
+
+				// Collect all meta tags keyed by name / property
+				const meta = {};
+
+				doc.querySelectorAll( "meta" ).forEach( m => {
+
+					const key = ( m.getAttribute( "name" ) || m.getAttribute( "property" ) || m.getAttribute( "http-equiv" ) || "" ).toLowerCase();
+
+					if ( key ) meta[ key ] = ( m.getAttribute( "content" ) || "" ).trim();
+
+				});
+
+				const getMeta = k => meta[ k ] || "";
+
+				// Basics
+				const titleEl = doc.querySelector( "title" );
+				const title = titleEl ? titleEl.textContent.trim() : "";
+
+				const canonicalEl = doc.querySelector( 'link[rel="canonical"]' );
+				const canonical = canonicalEl ? resolve( canonicalEl.getAttribute( "href" ), pageUrl ) : "";
+
+				const htmlLang = doc.documentElement.getAttribute( "lang" ) || "";
+
+				const charset = ( doc.querySelector( "meta[charset]" ) && doc.querySelector( "meta[charset]" ).getAttribute( "charset" ) )
+					|| ( getMeta( "content-type" ).match( /charset=([\w-]+)/i ) || [] )[ 1 ]
+					|| "";
+
+				// Open Graph
+				const og = {};
+				Object.keys( meta ).forEach( k => {
+					if ( k.indexOf( "og:" ) === 0 ) og[ k ] = meta[ k ];
+				});
+
+				// Twitter
+				const tw = {};
+				Object.keys( meta ).forEach( k => {
+					if ( k.indexOf( "twitter:" ) === 0 ) tw[ k ] = meta[ k ];
+				});
+
+				// Hreflang alternates
+				const hreflang = [];
+				doc.querySelectorAll( 'link[rel="alternate"][hreflang]' ).forEach( l => {
+					hreflang.push({
+						lang: l.getAttribute( "hreflang" ),
+						href: resolve( l.getAttribute( "href" ), pageUrl )
+					});
+				});
+
+				// Icons
+				const icons = [];
+				doc.querySelectorAll( 'link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"], link[rel="manifest"]' ).forEach( l => {
+					icons.push({
+						rel: l.getAttribute( "rel" ),
+						href: resolve( l.getAttribute( "href" ), pageUrl ),
+						sizes: l.getAttribute( "sizes" ) || ""
+					});
+				});
+
+				// Headings
+				const headings = [];
+				doc.querySelectorAll( "h1, h2, h3, h4, h5, h6" ).forEach( h => {
+					const text = h.textContent.replace( /\s+/g, " " ).trim();
+					if ( text ) headings.push({ level: Number( h.tagName[ 1 ] ), text: text });
+				});
+
+				const h1Count = headings.filter( h => h.level === 1 ).length;
+
+				// Images
+				const imgs = doc.querySelectorAll( "img" );
+				let noAlt = 0;
+				imgs.forEach( img => {
+					if ( ! img.hasAttribute( "alt" ) || img.getAttribute( "alt" ).trim() === "" ) noAlt++;
+				});
+
+				// JSON-LD schema
+				const schema = [];
+				doc.querySelectorAll( 'script[type="application/ld+json"]' ).forEach( s => {
+
+					const raw = s.textContent.trim();
+					if ( ! raw ) return;
+
+					try {
+						const parsed = JSON.parse( raw );
+						schema.push({ types: extractTypes( parsed ), json: parsed, ok: true });
+					} catch ( e ) {
+						schema.push({ types: [ "Parse-Fehler" ], json: raw, ok: false });
+					}
+
+				});
+
+				return {
+					pageUrl: pageUrl,
+					title: title,
+					description: getMeta( "description" ),
+					keywords: getMeta( "keywords" ),
+					robots: getMeta( "robots" ),
+					canonical: canonical,
+					viewport: getMeta( "viewport" ),
+					charset: charset,
+					lang: htmlLang,
+					author: getMeta( "author" ),
+					themeColor: getMeta( "theme-color" ),
+					generator: getMeta( "generator" ),
+					og: og,
+					tw: tw,
+					hreflang: hreflang,
+					icons: icons,
+					headings: headings,
+					h1Count: h1Count,
+					imgCount: imgs.length,
+					imgNoAlt: noAlt,
+					schema: schema
+				};
+
+			};
+
+			// Pull @type values out of any JSON-LD shape
+			const extractTypes = function( node ) {
+
+				const out = [];
+
+				const walk = function( n ) {
+					if ( ! n || typeof n !== "object" ) return;
+					if ( Array.isArray( n ) ) { n.forEach( walk ); return; }
+					if ( n[ "@type" ] ) {
+						const t = n[ "@type" ];
+						( Array.isArray( t ) ? t : [ t ] ).forEach( x => out.push( x ) );
+					}
+					if ( n[ "@graph" ] ) walk( n[ "@graph" ] );
+				};
+
+				walk( node );
+
+				return out.length ? [ ...new Set( out ) ] : [ "(ohne @type)" ];
+
+			};
+
+			// --- Rendering helpers ---
+
+			const esc = function( s ) {
+				return String( s == null ? "" : s )
+					.replace( /&/g, "&amp;" )
+					.replace( /</g, "&lt;" )
+					.replace( />/g, "&gt;" )
+					.replace( /"/g, "&quot;" );
+			};
+
+			const host = function( url ) {
+				try { return new URL( url ).hostname.replace( /^www\./, "" ); } catch ( e ) { return url; }
+			};
+
+			// Length badge for title / description
+			const lenBadge = function( len, min, ideal, max ) {
+
+				let cls = "ok";
+				if ( len === 0 ) cls = "err";
+				else if ( len < min || len > max ) cls = "err";
+				else if ( len < ideal[ 0 ] || len > ideal[ 1 ] ) cls = "warn";
+
+				return '<span class="len ' + cls + '">' + len + ' Z.</span>';
+
+			};
+
+			// A simple key/value table from rows [ [key, valueHtml], ... ]
+			const kvTable = function( rows ) {
+
+				if ( ! rows.length ) return '<p class="empty">Keine Daten gefunden.</p>';
+
+				let html = "<table><tbody>";
+
+				rows.forEach( r => {
+					html += '<tr><th class="key">' + esc( r[ 0 ] ) + '</th><td class="value">' + r[ 1 ] + '</td></tr>';
+				});
+
+				html += "</tbody></table>";
+
+				return html;
+
+			};
+
+			// Value or "fehlt" marker
+			const val = function( v ) {
+				return v ? esc( v ) : '<span class="miss">— fehlt</span>';
+			};
+
+			const linkVal = function( v ) {
+				if ( ! v ) return '<span class="miss">— fehlt</span>';
+				const safe = esc( v );
+				return '<a href="' + safe + '" target="_blank" rel="noopener noreferrer">' + safe + '</a>';
+			};
+
+			// --- Build result cards ---
+
+			const render = function( d, proxy ) {
+
+				const checks = buildChecks( d );
+				const score = Math.round( ( checks.filter( c => c.cls === "ok" ).length / checks.length ) * 100 );
+
+				let scoreCls = "is-bad";
+				if ( score >= 80 ) scoreCls = "is-good";
+				else if ( score >= 55 ) scoreCls = "is-mid";
+
+				let html = "";
+
+				// Overview + score
+				html += '<div class="card">';
+				html += '<div class="score">';
+				html += '<div class="score__ring ' + scoreCls + '">' + score + '</div>';
+				html += '<div class="score__meta"><div class="score__url">' + esc( d.pageUrl ) + '</div>';
+				html += '<div>Abgefragt über <strong>' + esc( proxy ) + '</strong> &middot; ' + d.headings.length + ' Headings &middot; ' + d.schema.length + ' Schema-Block(s)</div></div>';
+				html += '</div>';
+				html += '</div>';
+
+				// SERP + OG preview
+				html += '<div class="card">';
+				html += '<div class="card__head"><span class="card__title">Vorschau</span></div>';
+				html += '<div class="group"><div class="group__title">Google-Snippet</div>';
+				html += '<div class="serp">';
+				html += '<div class="serp__url">' + esc( d.canonical || d.pageUrl ) + '</div>';
+				html += '<div class="serp__title">' + esc( ( d.title || "(kein Title)" ).slice( 0, 65 ) ) + '</div>';
+				html += '<div class="serp__desc">' + esc( ( d.description || "(keine Description)" ).slice( 0, 165 ) ) + '</div>';
+				html += '</div></div>';
+
+				if ( d.og[ "og:image" ] ) {
+					const ogImg = resolve( d.og[ "og:image" ], d.pageUrl );
+					html += '<div class="group"><div class="group__title">Social-Card (Open Graph)</div>';
+					html += '<div class="og">';
+					html += '<img src="' + esc( ogImg ) + '" alt="OG-Bild" onerror="this.style.display=\'none\'">';
+					html += '<div class="og__body">';
+					html += '<div class="og__host">' + esc( host( d.pageUrl ) ) + '</div>';
+					html += '<div class="og__title">' + esc( d.og[ "og:title" ] || d.title ) + '</div>';
+					html += '<div class="og__desc">' + esc( d.og[ "og:description" ] || d.description ) + '</div>';
+					html += '</div></div></div>';
+				}
+
+				html += '</div>';
+
+				// Checks
+				html += '<div class="card">';
+				html += '<div class="card__head"><span class="card__title">Bewertung</span></div>';
+				html += '<ul class="checks">';
+				checks.forEach( c => {
+					const sym = c.cls === "ok" ? "✓" : ( c.cls === "warn" ? "!" : "×" );
+					html += '<li class="' + c.cls + '"><span class="ic">' + sym + '</span><span>' + esc( c.text ) + '</span></li>';
+				});
+				html += '</ul></div>';
+
+				// Meta basics
+				const tLen = d.title.length;
+				const dLen = d.description.length;
+
+				const basics = [
+					[ "Title", ( d.title ? esc( d.title ) : '<span class="miss">— fehlt</span>' ) + ( d.title ? lenBadge( tLen, 20, [ 30, 60 ], 70 ) : "" ) ],
+					[ "Description", ( d.description ? esc( d.description ) : '<span class="miss">— fehlt</span>' ) + ( d.description ? lenBadge( dLen, 50, [ 70, 160 ], 200 ) : "" ) ],
+					[ "Robots", val( d.robots ) ],
+					[ "Canonical", linkVal( d.canonical ) ],
+					[ "Sprache (lang)", val( d.lang ) ],
+					[ "Viewport", val( d.viewport ) ],
+					[ "Charset", val( d.charset ) ],
+					[ "Keywords", val( d.keywords ) ],
+					[ "Author", val( d.author ) ],
+					[ "Generator", val( d.generator ) ],
+					[ "Theme-Color", val( d.themeColor ) ]
+				];
+
+				html += card( "Meta", kvTable( basics ), copyBtn( "meta" ) );
+
+				// Open Graph
+				const ogRows = Object.keys( d.og ).sort().map( k => [ k, k === "og:image" || k === "og:url" ? linkVal( resolve( d.og[ k ], d.pageUrl ) ) : val( d.og[ k ] ) ] );
+				html += card( "Open Graph", kvTable( ogRows ) );
+
+				// Twitter
+				const twRows = Object.keys( d.tw ).sort().map( k => [ k, k === "twitter:image" ? linkVal( resolve( d.tw[ k ], d.pageUrl ) ) : val( d.tw[ k ] ) ] );
+				html += card( "Twitter Card", kvTable( twRows ) );
+
+				// Schema
+				let schemaHtml = "";
+				if ( ! d.schema.length ) {
+					schemaHtml = '<p class="empty">Kein JSON-LD gefunden.</p>';
+				} else {
+					d.schema.forEach( ( s, i ) => {
+						schemaHtml += '<div class="group">';
+						schemaHtml += '<div>' + s.types.map( t => '<span class="schema-type">' + esc( t ) + '</span>' ).join( "" ) + '</div>';
+						const jsonStr = s.ok ? JSON.stringify( s.json, null, 2 ) : s.json;
+						schemaHtml += '<details class="raw"><summary>JSON-LD anzeigen</summary><pre class="json">' + esc( jsonStr ) + '</pre></details>';
+						schemaHtml += '</div>';
+					});
+				}
+				html += card( "Schema.org (JSON-LD)", schemaHtml, "", d.schema.length );
+
+				// Headings outline
+				let outHtml = "";
+				if ( ! d.headings.length ) {
+					outHtml = '<p class="empty">Keine Überschriften gefunden.</p>';
+				} else {
+					outHtml = '<ul class="outline">';
+					d.headings.forEach( h => {
+						outHtml += '<li class="lvl' + h.level + '"><span class="tag">H' + h.level + '</span>' + esc( h.text ) + '</li>';
+					});
+					outHtml += '</ul>';
+				}
+				html += card( "Überschriften-Struktur", outHtml, "", d.headings.length );
+
+				// Hreflang
+				let hlHtml = "";
+				if ( ! d.hreflang.length ) {
+					hlHtml = '<p class="empty">Keine hreflang-Alternativen.</p>';
+				} else {
+					hlHtml = kvTable( d.hreflang.map( h => [ h.lang, linkVal( h.href ) ] ) );
+				}
+				html += card( "Hreflang", hlHtml, "", d.hreflang.length );
+
+				// Icons
+				let icHtml = "";
+				if ( ! d.icons.length ) {
+					icHtml = '<p class="empty">Keine Icons/Favicons verlinkt.</p>';
+				} else {
+					icHtml = kvTable( d.icons.map( ic => [ ic.rel + ( ic.sizes ? " (" + ic.sizes + ")" : "" ), linkVal( ic.href ) ] ) );
+				}
+				html += card( "Icons / Favicons", icHtml, "", d.icons.length );
+
+				// Images
+				const imgRows = [
+					[ "Bilder gesamt", String( d.imgCount ) ],
+					[ "Ohne Alt-Text", d.imgNoAlt > 0 ? '<span class="miss">' + d.imgNoAlt + '</span>' : "0" ]
+				];
+				html += card( "Bilder", kvTable( imgRows ) );
+
+				resultsEl.innerHTML = html;
+
+				// Store data for copy actions
+				resultsEl._seoData = d;
+
+				bindCopy();
+
+			};
+
+			// Card wrapper with optional count + copy button
+			const card = function( title, body, action, count ) {
+
+				let head = '<div class="card__head"><span class="card__title">' + esc( title );
+				if ( typeof count === "number" ) head += ' <span style="color:var(--accent)">(' + count + ')</span>';
+				head += '</span>' + ( action || "" ) + '</div>';
+
+				return '<div class="card">' + head + body + '</div>';
+
+			};
+
+			const copyBtn = function( kind ) {
+				return '<button type="button" class="copy-btn" data-copy="' + kind + '">Kopieren</button>';
+			};
+
+			// Build the SEO check list
+			const buildChecks = function( d ) {
+
+				const c = [];
+				const tLen = d.title.length;
+				const dLen = d.description.length;
+
+				// Title
+				if ( ! d.title ) c.push({ cls: "err", text: "Title fehlt" });
+				else if ( tLen < 30 || tLen > 60 ) c.push({ cls: "warn", text: "Title-Länge " + tLen + " Z. (ideal 30–60)" });
+				else c.push({ cls: "ok", text: "Title vorhanden (" + tLen + " Z.)" });
+
+				// Description
+				if ( ! d.description ) c.push({ cls: "err", text: "Meta-Description fehlt" });
+				else if ( dLen < 70 || dLen > 160 ) c.push({ cls: "warn", text: "Description-Länge " + dLen + " Z. (ideal 70–160)" });
+				else c.push({ cls: "ok", text: "Description vorhanden (" + dLen + " Z.)" });
+
+				// H1
+				if ( d.h1Count === 0 ) c.push({ cls: "err", text: "Keine H1 vorhanden" });
+				else if ( d.h1Count > 1 ) c.push({ cls: "warn", text: d.h1Count + " H1-Tags (idealerweise genau eine)" });
+				else c.push({ cls: "ok", text: "Genau eine H1" });
+
+				// Canonical
+				c.push( d.canonical ? { cls: "ok", text: "Canonical gesetzt" } : { cls: "warn", text: "Kein Canonical" } );
+
+				// Robots noindex
+				if ( /noindex/i.test( d.robots ) ) c.push({ cls: "err", text: "Robots: noindex gesetzt" });
+				else c.push({ cls: "ok", text: "Indexierbar (kein noindex)" });
+
+				// Viewport
+				c.push( d.viewport ? { cls: "ok", text: "Viewport gesetzt" } : { cls: "err", text: "Viewport fehlt (nicht responsive-ready)" } );
+
+				// Lang
+				c.push( d.lang ? { cls: "ok", text: "Sprache gesetzt (" + d.lang + ")" } : { cls: "warn", text: "lang-Attribut fehlt" } );
+
+				// OG
+				c.push( d.og[ "og:title" ] && d.og[ "og:image" ] ? { cls: "ok", text: "Open Graph vollständig" } : { cls: "warn", text: "Open Graph unvollständig (title/image)" } );
+
+				// Schema
+				c.push( d.schema.length ? { cls: "ok", text: d.schema.length + " Schema-Block(s) gefunden" } : { cls: "warn", text: "Keine strukturierten Daten (Schema.org)" } );
+
+				// Images alt
+				if ( d.imgCount === 0 ) c.push({ cls: "ok", text: "Keine Bilder" });
+				else if ( d.imgNoAlt === 0 ) c.push({ cls: "ok", text: "Alle Bilder mit Alt-Text" });
+				else c.push({ cls: "warn", text: d.imgNoAlt + " von " + d.imgCount + " Bildern ohne Alt-Text" });
+
+				return c;
+
+			};
+
+			// Copy handlers
+			const bindCopy = function() {
+
+				resultsEl.querySelectorAll( "[data-copy]" ).forEach( btn => {
+
+					btn.addEventListener( "click", async () => {
+
+						const d = resultsEl._seoData;
+						if ( ! d ) return;
+
+						const text = [
+							"URL: " + d.pageUrl,
+							"Title: " + d.title,
+							"Description: " + d.description,
+							"Robots: " + d.robots,
+							"Canonical: " + d.canonical,
+							"Lang: " + d.lang
+						].join( "\n" );
+
+						try {
+							await navigator.clipboard.writeText( text );
+							const old = btn.textContent;
+							btn.textContent = "Kopiert ✓";
+							setTimeout( () => { btn.textContent = old; }, 1200 );
+						} catch ( e ) {
+							btn.textContent = "Fehler";
+						}
+
+					});
+
+				});
+
+			};
+
+			// Status helpers
+			const setStatus = function( html ) {
+				statusEl.innerHTML = html ? '<div class="card">' + html + '</div>' : "";
+			};
+
+			// --- Main submit ---
+
+			const run = async function( e ) {
+
+				if ( e ) e.preventDefault();
+
+				const url = normalizeUrl( input.value );
+
+				if ( ! url ) {
+					setStatus( '<p class="note note--err" style="margin:0">Bitte eine gültige Domain oder URL eingeben.</p>' );
+					return;
+				}
+
+				resultsEl.innerHTML = "";
+				submitBtn.disabled = true;
+				setStatus( '<span class="spin"></span> <span style="margin-left:8px">Lade und analysiere <strong>' + esc( host( url ) ) + '</strong> …</span>' );
+
+				try {
+
+					const result = await fetchHtmlRetry( url );
+					const data = analyze( result.html, url );
+
+					setStatus( "" );
+					render( data, result.proxy );
+
+				} catch ( err ) {
+
+					const hint = CUSTOM
+						? 'Seite nicht erreichbar.'
+						: 'Alle öffentlichen Proxy-Dienste gerade blockiert/überlastet. Für zuverlässigen Betrieb eigenen Proxy setzen (<code>CUSTOM_PROXY</code> &ndash; siehe proxy.php / cloudflare-worker.js).';
+
+					setStatus( '<p class="note note--err" style="margin:0"><strong>Fehler:</strong> ' + esc( err.message ) + '<br>' + hint + '</p>' );
+
+				} finally {
+					submitBtn.disabled = false;
+				}
+
+			};
+
+			form.addEventListener( "submit", run );
+
+			resetBtn.addEventListener( "click", function() {
+				input.value = "";
+				resultsEl.innerHTML = "";
+				setStatus( "" );
+				input.focus();
+			});
+
+			// Prefill from ?url= for quick bookmarklet-style use
+			const params = new URLSearchParams( location.search );
+			if ( params.get( "url" ) ) {
+				input.value = params.get( "url" );
+				run();
+			}
+
+		})();
+
+	</script>
+
+</body>
+</html>
