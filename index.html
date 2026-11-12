@@ -575,6 +575,7 @@
 		}
 
 		.faq__body p { margin-bottom: 10px; }
+		.faq__body p:last-child { margin-bottom: 0; }
 		.faq__body strong { color: var( --text ); }
 		.faq__body code {
 			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
@@ -582,11 +583,72 @@
 			color: var( --accent );
 		}
 
+		/* Legend intro + stacked accordions */
+
+		.legend-head {
+			margin-top: 28px;
+			margin-bottom: 6px;
+			font-size: 0.72rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: var( --text-dim );
+			font-weight: 700;
+		}
+
+		.legend-head + .faq { margin-top: 0; }
+		.faq + .faq { margin-top: 8px; }
+
+		/* Definition list inside a legend accordion */
+
+		.faq dl {
+			display: grid;
+			grid-template-columns: 160px 1fr;
+			gap: 12px 16px;
+			margin: 0;
+		}
+
+		.faq dt {
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.82rem;
+			font-weight: 600;
+			color: var( --accent );
+			word-break: break-word;
+		}
+
+		.faq dd {
+			margin: 0;
+			font-size: 0.85rem;
+			color: var( --text-dim );
+		}
+
+		.faq dd strong { color: var( --text ); font-weight: 600; }
+
+		.faq dd code {
+			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.82em;
+			color: var( --accent );
+		}
+
+		.rec {
+			color: var( --green );
+			font-weight: 600;
+			white-space: nowrap;
+		}
+
 		@media ( max-width: 520px ) {
 
 			th.key { width: auto; }
 
 			.card { padding: 16px; }
+
+			.faq dl {
+				grid-template-columns: 1fr;
+				gap: 3px 0;
+			}
+
+			.faq dd { margin-bottom: 10px; }
+
+			.faq dd:last-child { margin-bottom: 0; }
 
 		}
 
@@ -643,17 +705,198 @@
 
 		</main>
 
+		<p class="legend-head">Richtwerte &amp; Erklärungen</p>
+
 		<details class="faq">
 
-			<summary>Was wird geprüft &amp; wie funktioniert das?</summary>
+			<summary>Meta-Tags</summary>
 
 			<div class="faq__body">
 
-				<p>Das Tool lädt den HTML-Quellcode der Seite clientseitig über <strong>öffentliche CORS-Proxys</strong> (allorigins, corsproxy.io, codetabs &ndash; parallel abgefragt, die erste gültige Antwort gewinnt) und parst den <code>&lt;head&gt;</code> sowie die Seitenstruktur per <code>DOMParser</code>. Es läuft kein eigenes Backend.</p>
+				<dl>
 
-				<p><strong>Ausgelesen wird:</strong> Title &amp; Meta-Description (inkl. Längen-Bewertung), Robots, Canonical, Viewport, Charset, Sprache, Open Graph, Twitter Cards, Schema.org (JSON-LD), Heading-Struktur (H1&ndash;H6), Hreflang-Alternativen, Favicons/Icons und Bilder-Alt-Texte.</p>
+					<dt>Title</dt>
+					<dd>Wichtigster On-Page-Faktor und der blaue Link im Google-Snippet. <span class="rec">30&ndash;60 Zeichen</span> (&lt; ~600&nbsp;px), sonst schneidet Google ab. Einzigartig je Seite, wichtigstes Keyword vorn, Marke hinten.</dd>
 
-				<p><strong>Hinweis Datenschutz:</strong> Die Abfrage läuft über einen fremden Proxy-Dienst &ndash; die angefragte URL ist für diesen sichtbar. Für interne/geschützte Seiten nicht geeignet. JavaScript-gerenderte Inhalte (SPAs) werden nur begrenzt erfasst, da der Proxy das rohe HTML ohne JS-Ausführung liefert.</p>
+					<dt>Meta-Description</dt>
+					<dd>Kein direkter Rankingfaktor, steuert aber die Klickrate im Snippet. <span class="rec">70&ndash;160 Zeichen</span>, aktiv formuliert, einzigartig. Fehlt sie, zieht Google selbst Text aus der Seite.</dd>
+
+					<dt>Robots</dt>
+					<dd><code>index, follow</code> = Standard. <code>noindex</code> hält die Seite aus dem Index, <code>nofollow</code> vererbt keinen Linkwert. Zusätze wie <code>max-image-preview:large</code> erlauben große Vorschaubilder.</dd>
+
+					<dt>Canonical</dt>
+					<dd>Kanonische URL gegen Duplicate Content. <strong>Absolute</strong> URL, idealerweise self-referencing (zeigt auf sich selbst).</dd>
+
+					<dt>Sprache (lang)</dt>
+					<dd><code>&lt;html lang="de"&gt;</code> &ndash; hilft Screenreadern und Google bei der Sprachzuordnung.</dd>
+
+					<dt>Viewport</dt>
+					<dd><code>width=device-width, initial-scale=1</code> &ndash; Pflicht für mobile Darstellung. Fehlt er, gilt die Seite als nicht mobiltauglich.</dd>
+
+					<dt>Charset</dt>
+					<dd>Zeichensatz, praktisch immer <code>UTF-8</code>. Sollte möglichst weit oben im <code>&lt;head&gt;</code> stehen.</dd>
+
+					<dt>Keywords</dt>
+					<dd>Das <code>meta keywords</code>-Tag ist tot &ndash; Google ignoriert es seit Jahren. Kein Handlungsbedarf.</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
+			<summary>Social Media (Open Graph &amp; Twitter) + Bildformate</summary>
+
+			<div class="faq__body">
+
+				<dl>
+
+					<dt>og:title / og:description</dt>
+					<dd>Titel und Text, wenn der Link geteilt wird (Facebook, LinkedIn, WhatsApp, Signal …). Ohne Werte fällt es auf <code>&lt;title&gt;</code> / Description zurück.</dd>
+
+					<dt>og:image</dt>
+					<dd>Vorschaubild beim Teilen. <span class="rec">1200 × 630 px</span> (Verhältnis 1,91:1), min. 600 × 315. Format <strong>JPG, PNG oder WebP</strong>, &lt; 8&nbsp;MB. <code>og:image:width</code>/<code>height</code> mitgeben, damit die Vorschau sofort korrekt rendert.</dd>
+
+					<dt>og:url / og:type</dt>
+					<dd>Kanonische URL und Typ (<code>website</code>, <code>article</code> …). Dazu <code>og:locale</code> (<code>de_DE</code>) und <code>og:site_name</code>.</dd>
+
+					<dt>twitter:card</dt>
+					<dd><code>summary_large_image</code> = großes Bild, <code>summary</code> = kleines. Fehlen die Twitter-Tags, zieht X/Twitter die OG-Werte.</dd>
+
+					<dt>twitter:image</dt>
+					<dd>min. 300 × 157, max. 4096 × 4096 px, &lt; 5&nbsp;MB, Format <strong>JPG/PNG/WebP/GIF</strong>. Ein <span class="rec">1200 × 630</span>-Bild passt für OG und Twitter gleichzeitig.</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
+			<summary>Schema.org (strukturierte Daten)</summary>
+
+			<div class="faq__body">
+
+				<dl>
+
+					<dt>Zweck</dt>
+					<dd>JSON-LD im <code>&lt;head&gt;</code> beschreibt die Seite maschinenlesbar und ermöglicht Rich Results (Sterne-Bewertungen, FAQ-Aufklapper, Breadcrumbs, Öffnungszeiten …).</dd>
+
+					<dt>@type</dt>
+					<dd>Häufig: <code>LocalBusiness</code>/<code>Organization</code> (Firma), <code>WebSite</code>, <code>BreadcrumbList</code>, <code>FAQPage</code>, <code>Product</code>, <code>Article</code>. Mehrere Blöcke pro Seite sind normal.</dd>
+
+					<dt>Prüfen</dt>
+					<dd>Immer mit Googles <strong>Rich Results Test</strong> oder dem <strong>schema.org Validator</strong> gegenchecken &ndash; Syntaxfehler kosten das Rich Result.</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
+			<summary>Struktur &amp; Überschriften</summary>
+
+			<div class="faq__body">
+
+				<dl>
+
+					<dt>H1</dt>
+					<dd><span class="rec">Genau eine</span> pro Seite, benennt das Hauptthema. Mehrere H1 verwässern das Signal.</dd>
+
+					<dt>Hierarchie</dt>
+					<dd>H2&ndash;H6 logisch verschachteln, <strong>keine Ebene überspringen</strong> (nach H2 kein H4). Dient Struktur und Barrierefreiheit, nicht dem Keyword-Stuffing.</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
+			<summary>Hreflang (Mehrsprachigkeit)</summary>
+
+			<div class="faq__body">
+
+				<dl>
+
+					<dt>Wann</dt>
+					<dd>Nur bei mehrsprachigen oder länderspezifischen Seiten nötig. Bei einsprachigen Seiten ist „fehlt" kein Problem.</dd>
+
+					<dt>Regeln</dt>
+					<dd>Je Sprachversion ein <code>hreflang="de"</code>, <code>hreflang="en"</code> … plus <code>x-default</code>. Muss <strong>bidirektional</strong> sein (jede Version verlinkt alle anderen) und sich selbst einschließen.</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
+			<summary>Icons &amp; Favicons</summary>
+
+			<div class="faq__body">
+
+				<dl>
+
+					<dt>favicon.svg</dt>
+					<dd>Moderner Standard &ndash; skaliert verlustfrei, unterstützt Dark/Light. Erste Wahl.</dd>
+
+					<dt>favicon.ico</dt>
+					<dd>Fallback für alte Browser (16/32/48 px im ICO). PNG 16 × 16 / 32 × 32 ergänzen.</dd>
+
+					<dt>apple-touch-icon</dt>
+					<dd><span class="rec">180 × 180 px</span> PNG &ndash; Homescreen-Icon auf iOS.</dd>
+
+					<dt>site.webmanifest</dt>
+					<dd>Für PWA-Verhalten und das Android-Theme (Name, Icons, <code>theme_color</code>).</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
+			<summary>Bilder &amp; Alt-Texte</summary>
+
+			<div class="faq__body">
+
+				<dl>
+
+					<dt>Alt-Text</dt>
+					<dd>Jedes <strong>inhaltsrelevante</strong> Bild braucht ein aussagekräftiges <code>alt</code> (Barrierefreiheit + Bild-SEO). Rein dekorative Bilder: leeres <code>alt=""</code>.</dd>
+
+					<dt>Format</dt>
+					<dd><strong>WebP/AVIF</strong> für kleinste Dateien, <strong>JPG</strong> für Fotos, <strong>PNG/SVG</strong> für Grafiken und Logos.</dd>
+
+					<dt>Performance</dt>
+					<dd><code>width</code>/<code>height</code> setzen (verhindert Layout-Sprünge / CLS) und <code>loading="lazy"</code> für Bilder unterhalb des sichtbaren Bereichs.</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
+			<summary>Wie funktioniert das?</summary>
+
+			<div class="faq__body">
+
+				<p>Das Tool lädt den HTML-Quellcode der Seite <strong>clientseitig über einen Proxy</strong> (eigener <code>proxy.php</code>, öffentliche Dienste als Fallback) und parst <code>&lt;head&gt;</code> und Seitenstruktur per <code>DOMParser</code>. Kein eigenes Backend, kein Framework.</p>
+
+				<p><strong>Grenze:</strong> JavaScript-gerenderte Inhalte (SPAs) werden nur begrenzt erfasst &ndash; der Proxy liefert das rohe HTML ohne JS-Ausführung.</p>
+
+				<p><strong>Datenschutz:</strong> Der eigene Proxy sieht die abgefragte URL (ist aber deiner). Greift der öffentliche Fallback, sieht ein fremder Dienst die URL &ndash; für interne/geschützte Seiten nicht geeignet.</p>
 
 			</div>
 
