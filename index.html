@@ -38,6 +38,22 @@
 			min-height: 100vh;
 			line-height: 1.5;
 			padding: 32px 16px 64px;
+			position: relative;
+		}
+
+		/* Background grid pattern */
+
+		body::before {
+			content: '';
+			position: fixed;
+			inset: 0;
+			z-index: -1;
+			background-image:
+				linear-gradient( to right, rgba( 255, 255, 255, 0.04 ) 1px, transparent 1px ),
+				linear-gradient( to bottom, rgba( 255, 255, 255, 0.04 ) 1px, transparent 1px );
+			background-size: 24px 24px;
+			mask-image: radial-gradient( ellipse at center, transparent, var( --bg ) );
+			-webkit-mask-image: radial-gradient( ellipse at center, transparent, var( --bg ) );
 		}
 
 		.wrap {
@@ -173,10 +189,6 @@
 			gap: 12px;
 			flex-wrap: wrap;
 			margin-top: 14px;
-		}
-
-		.presets .reset {
-			margin-left: auto;
 		}
 
 		.presets .reset:hover {
