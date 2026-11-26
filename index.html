@@ -939,6 +939,29 @@
 
 		<details class="faq">
 
+			<summary>Crawling: robots.txt, Sitemap &amp; llms.txt</summary>
+
+			<div class="faq__body">
+
+				<dl>
+
+					<dt>robots.txt</dt>
+					<dd>Liegt unter <code>/robots.txt</code> und steuert, was Crawler lesen dürfen (<code>Disallow</code>/<code>Allow</code>). <strong>Kein</strong> Schutz vor Indexierung &ndash; dafür ist <code>noindex</code> zuständig. Sollte mindestens einen <code>Sitemap:</code>-Verweis enthalten.</dd>
+
+					<dt>Sitemap</dt>
+					<dd>XML-Liste aller indexierbaren URLs. WordPress variiert je nach Plugin: <strong>Yoast &amp; Rank Math</strong> → <code>/sitemap_index.xml</code>, <strong>WP-Core</strong> → <code>/wp-sitemap.xml</code>, sonst oft <code>/sitemap.xml</code>. Das Tool nimmt zuerst den Verweis aus der robots.txt, sonst probiert es diese Pfade durch.</dd>
+
+					<dt>llms.txt</dt>
+					<dd>Neuer, <strong>optionaler</strong> Standard unter <code>/llms.txt</code> (Markdown). Gibt KI-Crawlern wie ChatGPT/Perplexity eine kuratierte Inhaltsübersicht. Fehlt er, ist das kein Fehler &ndash; nur eine Chance für GEO/AI-Sichtbarkeit.</dd>
+
+				</dl>
+
+			</div>
+
+		</details>
+
+		<details class="faq">
+
 			<summary>Wie funktioniert das?</summary>
 
 			<div class="faq__body">
@@ -1069,6 +1092,188 @@
 				}
 
 				return await raceProxies( url );
+
+			};
+
+			// Fetch a raw text resource (robots.txt / sitemap / llms.txt) through the
+			// proxy chain. Unlike fetchHtmlRetry it does not require HTML markup and
+			// surfaces the upstream HTTP status when the proxy exposes it (allorigins JSON).
+			const fetchResource = async function( url ) {
+
+				const tryOne = async function( proxy ) {
+
+					const ctrl = new AbortController();
+					const timer = setTimeout( () => ctrl.abort(), 10000 );
+
+					try {
+
+						const res = await fetch( proxy.build( url ), { redirect: "follow", signal: ctrl.signal } );
+
+						clearTimeout( timer );
+
+						let body = "";
+						let status = res.status;
+
+						if ( proxy.type === "json" ) {
+							const data = await res.json();
+							body = data && data.contents ? data.contents : "";
+							if ( data && data.status && data.status.http_code ) status = data.status.http_code;
+						} else {
+							if ( ! res.ok ) throw new Error( "HTTP " + res.status );
+							body = await res.text();
+						}
+
+						return { body: body || "", status: status };
+
+					} catch ( e ) {
+						clearTimeout( timer );
+						throw e;
+					}
+
+				};
+
+				if ( CUSTOM ) {
+					try {
+						return await tryOne( CUSTOM );
+					} catch ( e ) {
+						// own proxy failed — fall through to the public race
+					}
+				}
+
+				return await Promise.any( PROXIES.map( tryOne ) );
+
+			};
+
+			// Fetch one file and classify its body (HTML soft-404 vs real content)
+			const probe = async function( url ) {
+
+				try {
+
+					const r = await fetchResource( url );
+					const text = ( r.body || "" ).trim();
+					const head = text.slice( 0, 600 ).toLowerCase();
+					const looksHtml = /^<(!doctype|html|head|body)/.test( head ) || /<html[\s>]/.test( head );
+					const notFound = r.status === 404 || r.status === 403 || r.status === 410;
+
+					return { text: text, status: r.status, looksHtml: looksHtml, notFound: notFound };
+
+				} catch ( e ) {
+					return { text: "", status: 0, looksHtml: false, notFound: true };
+				}
+
+			};
+
+			// Does the body look like a real XML sitemap?
+			const isSitemap = function( text ) {
+				return /<(urlset|sitemapindex)[\s>]/i.test( text );
+			};
+
+			// Short summary of a sitemap body (index vs urlset)
+			const sitemapInfo = function( text ) {
+
+				if ( /<sitemapindex[\s>]/i.test( text ) ) {
+					const n = ( text.match( /<sitemap[\s>]/gi ) || [] ).length;
+					return "Sitemap-Index mit " + n + " Sitemaps";
+				}
+
+				const n = ( text.match( /<url[\s>]/gi ) || [] ).length;
+				return n + " URLs";
+
+			};
+
+			// Path-only label for a URL (for the "geprüft:" list)
+			const pathOnly = function( url ) {
+				try { return new URL( url ).pathname; } catch ( e ) { return url; }
+			};
+
+			// Check robots.txt, Sitemap and llms.txt and fill the placeholder card
+			const checkFiles = async function( pageUrl ) {
+
+				const body = document.getElementById( "files-body" );
+				if ( ! body ) return;
+
+				let origin;
+
+				try {
+					origin = new URL( pageUrl ).origin;
+				} catch ( e ) {
+					body.innerHTML = '<p class="empty">Ungültige URL.</p>';
+					return;
+				}
+
+				// robots.txt — exists only if it carries robots directives (not a soft-404 page)
+				const robotsRes = await probe( origin + "/robots.txt" );
+				const robotsExists = ! robotsRes.notFound && robotsRes.text && ! robotsRes.looksHtml
+					&& /(^|\n)\s*(user-agent|disallow|allow|sitemap|crawl-delay)\s*:/i.test( robotsRes.text );
+
+				// Sitemaps declared in robots.txt
+				const declared = robotsExists
+					? ( robotsRes.text.match( /^\s*sitemap:\s*\S+/gim ) || [] ).map( l => l.replace( /^\s*sitemap:\s*/i, "" ).trim() )
+					: [];
+
+				// Sitemap: prefer robots-declared, else probe common WP / plugin paths
+				const candidates = declared.length ? declared : [
+					origin + "/sitemap.xml",
+					origin + "/sitemap_index.xml", // Yoast / Rank Math
+					origin + "/wp-sitemap.xml" // WP core
+				];
+
+				let sitemap = null;
+
+				for ( let i = 0; i < candidates.length; i++ ) {
+					const r = await probe( candidates[ i ] );
+					if ( ! r.notFound && isSitemap( r.text ) ) {
+						sitemap = { url: candidates[ i ], info: sitemapInfo( r.text ) };
+						break;
+					}
+				}
+
+				// llms.txt — plain markdown, optional (for AI crawlers)
+				const llmsRes = await probe( origin + "/llms.txt" );
+				const llmsExists = ! llmsRes.notFound && llmsRes.text.length > 0 && ! llmsRes.looksHtml
+					&& ! isSitemap( llmsRes.text );
+
+				const rows = [];
+
+				// robots.txt
+				if ( robotsExists ) {
+					rows.push([ "robots.txt",
+						'<span class="len ok">vorhanden</span> ' + linkVal( origin + "/robots.txt" )
+						+ ( declared.length
+							? ' &middot; ' + declared.length + ' Sitemap-Verweis(e)'
+							: ' &middot; <span class="miss">kein Sitemap-Verweis</span>' )
+					]);
+				} else {
+					rows.push([ "robots.txt",
+						'<span class="len err">fehlt</span> ' + linkVal( origin + "/robots.txt" )
+					]);
+				}
+
+				// Sitemap
+				if ( sitemap ) {
+					rows.push([ "Sitemap",
+						'<span class="len ok">gefunden</span> ' + linkVal( sitemap.url ) + ' &middot; ' + esc( sitemap.info )
+						+ ( declared.length ? '' : ' <span class="empty">(per Pfad-Probe)</span>' )
+					]);
+				} else {
+					rows.push([ "Sitemap",
+						'<span class="len err">nicht gefunden</span> <span class="empty">(geprüft: '
+						+ esc( candidates.map( pathOnly ).join( ", " ) ) + ')</span>'
+					]);
+				}
+
+				// llms.txt
+				if ( llmsExists ) {
+					rows.push([ "llms.txt",
+						'<span class="len ok">vorhanden</span> ' + linkVal( origin + "/llms.txt" )
+					]);
+				} else {
+					rows.push([ "llms.txt",
+						'<span class="len warn">nicht vorhanden</span> <span class="empty">(optional &ndash; für AI-Crawler)</span>'
+					]);
+				}
+
+				body.innerHTML = kvTable( rows );
 
 			};
 
@@ -1361,6 +1566,12 @@
 				});
 				html += '</ul></div>';
 
+				// Crawling files (filled in async after the main render)
+				html += '<div class="card" id="files-card">';
+				html += '<div class="card__head"><span class="card__title">Crawling &amp; Robots</span></div>';
+				html += '<div id="files-body"><span class="spin"></span> <span style="margin-left:8px">Prüfe robots.txt, Sitemap, llms.txt …</span></div>';
+				html += '</div>';
+
 				// Meta basics
 				const tLen = d.title.length;
 				const dLen = d.description.length;
@@ -1636,6 +1847,9 @@
 
 					setStatus( "" );
 					render( data, result.proxy );
+
+					// robots.txt / Sitemap / llms.txt are separate root-level fetches
+					checkFiles( url );
 
 				} catch ( err ) {
 
