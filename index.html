@@ -184,6 +184,39 @@
 			border-color: var( --accent );
 		}
 
+		/* Chips (toggle buttons) */
+
+		.chips {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+		}
+
+		.chip {
+			background: var( --surface-2 );
+			border: 1px solid var( --border );
+			color: var( --text-dim );
+			font-family: inherit;
+			font-size: 0.78rem;
+			font-weight: 600;
+			padding: 6px 12px;
+			border-radius: 999px;
+			cursor: pointer;
+			transition: background 0.15s, color 0.15s, border-color 0.15s;
+		}
+
+		.chip:hover {
+			opacity: 1;
+			color: var( --text );
+			border-color: var( --accent );
+		}
+
+		.chip[aria-pressed="true"] {
+			background: var( --accent );
+			color: #1a1d23;
+			border-color: var( --accent );
+		}
+
 		.presets {
 			display: flex;
 			gap: 12px;
@@ -374,33 +407,26 @@
 			margin: 0 6px 6px 0;
 		}
 
-		details.raw {
-			margin-top: 8px;
-			border: 1px solid var( --border );
-			border-radius: 6px;
+		.schema-chips {
+			margin-bottom: 10px;
 		}
 
-		details.raw > summary {
-			padding: 8px 12px;
-			font-size: 0.78rem;
-			color: var( --text-dim );
-			cursor: pointer;
-			list-style: none;
+		.schema-chip {
+			font-size: 0.75rem;
 		}
-
-		details.raw > summary::-webkit-details-marker { display: none; }
-		details.raw[open] > summary { color: var( --accent ); }
 
 		pre.json {
 			margin: 0;
 			padding: 12px;
-			border-top: 1px solid var( --border );
+			border: 1px solid var( --border );
+			border-radius: 6px;
 			font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 			font-size: 0.78rem;
 			line-height: 1.5;
 			color: var( --text );
-			overflow-x: auto;
+			overflow: auto;
 			white-space: pre;
+			max-height: 460px;
 		}
 
 		/* Headings outline */
@@ -1187,6 +1213,31 @@
 
 			};
 
+			// Return the part of a JSON-LD block matching one @type ("__all__" = everything)
+			const schemaSubset = function( json, type ) {
+
+				if ( type === "__all__" ) return json;
+
+				let nodes;
+
+				if ( Array.isArray( json ) ) {
+					nodes = json;
+				} else if ( json && Array.isArray( json[ "@graph" ] ) ) {
+					nodes = json[ "@graph" ];
+				} else {
+					nodes = [ json ];
+				}
+
+				const match = nodes.filter( n => {
+					const t = n && n[ "@type" ];
+					if ( ! t ) return false;
+					return ( Array.isArray( t ) ? t : [ t ] ).indexOf( type ) !== -1;
+				});
+
+				return match.length === 1 ? match[ 0 ] : match;
+
+			};
+
 			// --- Rendering helpers ---
 
 			const esc = function( s ) {
@@ -1325,17 +1376,34 @@
 				const twRows = Object.keys( d.tw ).sort().map( k => [ k, k === "twitter:image" ? linkVal( resolve( d.tw[ k ], d.pageUrl ) ) : val( d.tw[ k ] ) ] );
 				html += card( "Twitter Card", kvTable( twRows ) );
 
-				// Schema
+				// Schema — clickable type badges filter the JSON output per @type
 				let schemaHtml = "";
 				if ( ! d.schema.length ) {
 					schemaHtml = '<p class="empty">Kein JSON-LD gefunden.</p>';
 				} else {
 					d.schema.forEach( ( s, i ) => {
-						schemaHtml += '<div class="group">';
-						schemaHtml += '<div>' + s.types.map( t => '<span class="schema-type">' + esc( t ) + '</span>' ).join( "" ) + '</div>';
-						const jsonStr = s.ok ? JSON.stringify( s.json, null, 2 ) : s.json;
-						schemaHtml += '<details class="raw"><summary>JSON-LD anzeigen</summary><pre class="json">' + esc( jsonStr ) + '</pre></details>';
+
+						if ( ! s.ok ) {
+							schemaHtml += '<div class="group">';
+							schemaHtml += '<div class="chips schema-chips"><span class="schema-type">Parse-Fehler</span></div>';
+							schemaHtml += '<pre class="json">' + esc( s.json ) + '</pre>';
+							schemaHtml += '</div>';
+							return;
+						}
+
+						// "Alle" first, then one chip per @type; first type is active by default
+						let chips = '<button type="button" class="chip schema-chip" aria-pressed="false" data-type="__all__">Alle</button>';
+						chips += s.types.map( ( t, ti ) =>
+							'<button type="button" class="chip schema-chip" aria-pressed="' + ( ti === 0 ? "true" : "false" ) + '" data-type="' + esc( t ) + '">' + esc( t ) + '</button>'
+						).join( "" );
+
+						const initial = JSON.stringify( schemaSubset( s.json, s.types[ 0 ] ), null, 2 );
+
+						schemaHtml += '<div class="group schema-group" data-block="' + i + '">';
+						schemaHtml += '<div class="chips schema-chips">' + chips + '</div>';
+						schemaHtml += '<pre class="json schema-json">' + esc( initial ) + '</pre>';
 						schemaHtml += '</div>';
+
 					});
 				}
 				html += card( "Schema.org (JSON-LD)", schemaHtml, "", d.schema.length );
@@ -1384,6 +1452,7 @@
 				resultsEl._seoData = d;
 
 				bindCopy();
+				bindSchema();
 
 			};
 
@@ -1479,6 +1548,37 @@
 						} catch ( e ) {
 							btn.textContent = "Fehler";
 						}
+
+					});
+
+				});
+
+			};
+
+			// Schema type badges: switch the JSON output to the clicked @type (or all)
+			const bindSchema = function() {
+
+				resultsEl.querySelectorAll( ".schema-group" ).forEach( group => {
+
+					const idx = Number( group.getAttribute( "data-block" ) );
+					const out = group.querySelector( ".schema-json" );
+					const d = resultsEl._seoData;
+
+					if ( ! d || ! d.schema[ idx ] || ! out ) return;
+
+					const json = d.schema[ idx ].json;
+					const chips = group.querySelectorAll( ".schema-chip" );
+
+					chips.forEach( chip => {
+
+						chip.addEventListener( "click", () => {
+
+							chips.forEach( c => c.setAttribute( "aria-pressed", "false" ) );
+							chip.setAttribute( "aria-pressed", "true" );
+
+							out.textContent = JSON.stringify( schemaSubset( json, chip.getAttribute( "data-type" ) ), null, 2 );
+
+						});
 
 					});
 
