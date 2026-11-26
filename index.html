@@ -407,6 +407,19 @@
 			margin: 0 6px 6px 0;
 		}
 
+		.schema-val {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-bottom: 14px;
+		}
+
+		a.copy-btn {
+			text-decoration: none;
+			display: inline-flex;
+			align-items: center;
+		}
+
 		.schema-chips {
 			margin-bottom: 10px;
 		}
@@ -1381,6 +1394,14 @@
 				if ( ! d.schema.length ) {
 					schemaHtml = '<p class="empty">Kein JSON-LD gefunden.</p>';
 				} else {
+
+					// External validators for the analyzed URL
+					const vUrl = encodeURIComponent( d.pageUrl );
+					schemaHtml += '<div class="schema-val">'
+						+ '<a class="copy-btn" href="https://validator.schema.org/#url=' + vUrl + '" target="_blank" rel="noopener noreferrer">Schema.org Validator ↗</a>'
+						+ '<a class="copy-btn" href="https://search.google.com/test/rich-results?url=' + vUrl + '" target="_blank" rel="noopener noreferrer">Rich Results Test ↗</a>'
+						+ '</div>';
+
 					d.schema.forEach( ( s, i ) => {
 
 						if ( ! s.ok ) {
