@@ -25,6 +25,8 @@ SEO-relevante Daten einer beliebigen Domain clientseitig auslesen. HTML wird üb
 - **Schema.org (JSON-LD):** erkennt alle `@type` (inkl. `@graph`), formatiertes JSON ausklappbar
 - **Überschriften-Struktur:** H1–H6 als eingerückte Outline
 - **Hreflang**, **Icons/Favicons**, **Bilder** (Anzahl + ohne Alt)
+- **Crawling:** robots.txt, Sitemap (WP-Plugin-aware: robots-Verweis → `/sitemap.xml` → `/sitemap_index.xml` Yoast/RankMath → `/wp-sitemap.xml`), llms.txt – eigene Root-Fetches, Content-Shape-Erkennung gegen Soft-404
+- **Content & Technik:** HTML-Größe, Wortanzahl (Thin-Content), Link-Statistik (intern/extern/nofollow), Canonical self-referencing, Mixed Content (http auf https), Heading-Hierarchie-Lücken, OG-Bild-Ist-Maße (async geladen)
 - **Kopieren** der Kerndaten (Clipboard API)
 - **Prefill per `?url=`** → als Bookmarklet/Lesezeichen nutzbar (`…/index.html?url=DOMAIN`)
 - Domain-Normalisierung (ergänzt `https://`, lowercased Host)

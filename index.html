@@ -1277,6 +1277,37 @@
 
 			};
 
+			// Measure the real OG image dimensions and compare to the 1200×630 recommendation
+			const checkOgImage = function( d ) {
+
+				const el = document.getElementById( "og-dim" );
+				if ( ! el ) return;
+
+				if ( ! d.og[ "og:image" ] ) {
+					el.textContent = "";
+					return;
+				}
+
+				const img = new Image();
+
+				img.onload = function() {
+					const w = img.naturalWidth;
+					const h = img.naturalHeight;
+					const ratio = h ? w / h : 0;
+					const good = w >= 600 && h >= 315 && Math.abs( ratio - 1.91 ) < 0.3;
+					el.className = "";
+					el.innerHTML = w + ' × ' + h + ' px <span class="len ' + ( good ? "ok" : "warn" ) + '">' + ( good ? "ok" : "empf. 1200 × 630" ) + '</span>';
+				};
+
+				img.onerror = function() {
+					el.className = "";
+					el.innerHTML = '<span class="miss">Bild nicht ladbar</span>';
+				};
+
+				img.src = resolve( d.og[ "og:image" ], d.pageUrl );
+
+			};
+
 			// Resolve a possibly relative URL against the page URL
 			const resolve = function( value, base ) {
 
@@ -1361,6 +1392,67 @@
 
 				const h1Count = headings.filter( h => h.level === 1 ).length;
 
+				// Heading hierarchy gaps (skipped levels, e.g. H2 → H4)
+				const headingGaps = [];
+				let prevLvl = 0;
+				headings.forEach( h => {
+					if ( prevLvl && h.level > prevLvl + 1 ) headingGaps.push( "H" + prevLvl + " → H" + h.level );
+					prevLvl = h.level;
+				});
+
+				// Canonical consistency: self-referencing vs. pointing elsewhere
+				const normCmp = function( u ) {
+					try {
+						const x = new URL( u );
+						return x.hostname.replace( /^www\./, "" ).toLowerCase() + x.pathname.replace( /\/+$/, "" ) + x.search;
+					} catch ( e ) {
+						return "";
+					}
+				};
+
+				let canonicalState = "none";
+				if ( canonical ) canonicalState = normCmp( canonical ) === normCmp( pageUrl ) ? "self" : "other";
+
+				// Mixed content: http:// resources loaded on an https page
+				const mixed = [];
+				if ( /^https:/i.test( pageUrl ) ) {
+					doc.querySelectorAll( "[src], [href]" ).forEach( el => {
+						const a = el.getAttribute( "src" ) || el.getAttribute( "href" ) || "";
+						if ( ! /^http:\/\//i.test( a ) ) return;
+						const tag = el.tagName.toLowerCase();
+						if ( tag === "a" ) return; // navigational link, not a loaded resource
+						if ( tag === "link" ) {
+							const rel = ( el.getAttribute( "rel" ) || "" ).toLowerCase();
+							if ( ! /stylesheet|preload|icon|manifest/.test( rel ) ) return;
+						}
+						if ( mixed.indexOf( a ) === -1 ) mixed.push( a );
+					});
+				}
+
+				// Link stats (internal / external / nofollow)
+				const pageHost = ( function() { try { return new URL( pageUrl ).hostname.replace( /^www\./, "" ).toLowerCase(); } catch ( e ) { return ""; } })();
+				let linkInt = 0, linkExt = 0, linkNofollow = 0;
+				doc.querySelectorAll( "a[href]" ).forEach( a => {
+					const href = a.getAttribute( "href" ) || "";
+					if ( /^(#|mailto:|tel:|javascript:)/i.test( href ) ) return;
+					let hh;
+					try { hh = new URL( resolve( href, pageUrl ) ).hostname.replace( /^www\./, "" ).toLowerCase(); } catch ( e ) { return; }
+					if ( hh === pageHost ) linkInt++; else linkExt++;
+					if ( /\bnofollow\b/i.test( a.getAttribute( "rel" ) || "" ) ) linkNofollow++;
+				});
+
+				// Visible word count (thin-content signal)
+				let wordCount = 0;
+				if ( doc.body ) {
+					const clone = doc.body.cloneNode( true );
+					clone.querySelectorAll( "script, style, noscript, template" ).forEach( n => n.remove() );
+					const txt = clone.textContent.replace( /\s+/g, " " ).trim();
+					wordCount = txt ? txt.split( " " ).length : 0;
+				}
+
+				// HTML transfer size (raw, uncompressed)
+				const htmlBytes = new TextEncoder().encode( html ).length;
+
 				// Images
 				const imgs = doc.querySelectorAll( "img" );
 				let noAlt = 0;
@@ -1403,6 +1495,12 @@
 					icons: icons,
 					headings: headings,
 					h1Count: h1Count,
+					headingGaps: headingGaps,
+					canonicalState: canonicalState,
+					mixed: mixed,
+					links: { total: linkInt + linkExt, int: linkInt, ext: linkExt, nofollow: linkNofollow },
+					wordCount: wordCount,
+					htmlBytes: htmlBytes,
 					imgCount: imgs.length,
 					imgNoAlt: noAlt,
 					schema: schema
@@ -1544,7 +1642,7 @@
 
 				if ( d.og[ "og:image" ] ) {
 					const ogImg = resolve( d.og[ "og:image" ], d.pageUrl );
-					html += '<div class="group"><div class="group__title">Social-Card (Open Graph)</div>';
+					html += '<div class="group"><div class="group__title">Social-Card (Open Graph) &middot; <span id="og-dim" class="empty">messe Bild …</span></div>';
 					html += '<div class="og">';
 					html += '<img src="' + esc( ogImg ) + '" alt="OG-Bild" onerror="this.style.display=\'none\'">';
 					html += '<div class="og__body">';
@@ -1591,6 +1689,26 @@
 				];
 
 				html += card( "Meta", kvTable( basics ), copyBtn( "meta" ) );
+
+				// Content & technical signals
+				const kb = d.htmlBytes / 1024;
+				const sizeStr = kb < 1024 ? kb.toFixed( 0 ) + " KB" : ( kb / 1024 ).toFixed( 2 ) + " MB";
+
+				let canonBadge;
+				if ( d.canonicalState === "self" ) canonBadge = '<span class="len ok">self-referencing</span>';
+				else if ( d.canonicalState === "other" ) canonBadge = '<span class="len warn">zeigt auf andere URL</span> ' + linkVal( d.canonical );
+				else canonBadge = '<span class="len err">nicht gesetzt</span>';
+
+				const techRows = [
+					[ "HTML-Größe", esc( sizeStr ) + ( d.htmlBytes > 150 * 1024 ? ' <span class="len warn">groß</span>' : '' ) ],
+					[ "Wortanzahl", d.wordCount + ( d.wordCount && d.wordCount < 300 ? ' <span class="len warn">dünn</span>' : ' <span class="len ok">ok</span>' ) ],
+					[ "Links", d.links.total + ' gesamt &middot; ' + d.links.int + ' intern &middot; ' + d.links.ext + ' extern &middot; ' + d.links.nofollow + ' nofollow' ],
+					[ "Canonical-Status", canonBadge ],
+					[ "Mixed Content", d.mixed.length ? '<span class="len err">' + d.mixed.length + ' unsichere Ressource(n)</span>' : '<span class="len ok">keine</span>' ],
+					[ "Heading-Hierarchie", d.headingGaps.length ? '<span class="len warn">Sprung: ' + esc( d.headingGaps.join( ", " ) ) + '</span>' : '<span class="len ok">lückenlos</span>' ]
+				];
+
+				html += card( "Content & Technik", kvTable( techRows ) );
 
 				// Open Graph
 				const ogRows = Object.keys( d.og ).sort().map( k => [ k, k === "og:image" || k === "og:url" ? linkVal( resolve( d.og[ k ], d.pageUrl ) ) : val( d.og[ k ] ) ] );
@@ -1726,7 +1844,18 @@
 				else c.push({ cls: "ok", text: "Genau eine H1" });
 
 				// Canonical
-				c.push( d.canonical ? { cls: "ok", text: "Canonical gesetzt" } : { cls: "warn", text: "Kein Canonical" } );
+				if ( d.canonicalState === "self" ) c.push({ cls: "ok", text: "Canonical self-referencing" });
+				else if ( d.canonicalState === "other" ) c.push({ cls: "warn", text: "Canonical zeigt auf andere URL" });
+				else c.push({ cls: "warn", text: "Kein Canonical" });
+
+				// Mixed content
+				if ( d.mixed.length ) c.push({ cls: "err", text: "Mixed Content: " + d.mixed.length + " unsichere Ressource(n)" });
+
+				// Heading hierarchy
+				if ( d.headingGaps.length ) c.push({ cls: "warn", text: "Heading-Hierarchie überspringt Ebenen" });
+
+				// Thin content
+				if ( d.wordCount && d.wordCount < 300 ) c.push({ cls: "warn", text: "Wenig Textinhalt (" + d.wordCount + " Wörter)" });
 
 				// Robots noindex
 				if ( /noindex/i.test( d.robots ) ) c.push({ cls: "err", text: "Robots: noindex gesetzt" });
@@ -1850,6 +1979,9 @@
 
 					// robots.txt / Sitemap / llms.txt are separate root-level fetches
 					checkFiles( url );
+
+					// Real OG image dimensions (loaded directly from the source)
+					checkOgImage( data );
 
 				} catch ( err ) {
 
